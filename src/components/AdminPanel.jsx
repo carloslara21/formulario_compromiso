@@ -6,9 +6,12 @@ function AdminPanel({ data, onUpdate, onClose }) {
   const [formData, setFormData] = useState({
     newServer: '',
     newProject: '',
+    newRoom: '',
     newTeammate: '',
     newQuestion: '',
     serverForProject: '',
+    serverForRoom: '',
+    projectForRoom: '',
     projectForTeammate: ''
   })
   const [filterServer, setFilterServer] = useState('')
@@ -55,6 +58,38 @@ function AdminPanel({ data, onUpdate, onClose }) {
     }
     onUpdate(newData)
     setFormData({ ...formData, newProject: '', serverForProject: '' })
+  }
+
+  const handleAddRoom = () => {
+    if (!formData.serverForRoom || !formData.projectForRoom || !formData.newRoom.trim()) return
+    const server = formData.serverForRoom
+    const project = formData.projectForRoom
+    const rooms = { ...(data.rooms || {}) }
+    rooms[server] = { ...(rooms[server] || {}) }
+    rooms[server][project] = [ ...(rooms[server][project] || []), formData.newRoom.trim() ]
+
+    const newData = {
+      ...data,
+      rooms
+    }
+    onUpdate(newData)
+    setFormData({ ...formData, newRoom: '', projectForRoom: '' })
+  }
+
+  const handleDeleteRoom = (server, project, room) => {
+    if (window.confirm(`¿Está seguro de eliminar la sala "${room}"?`)) {
+      const rooms = { ...(data.rooms || {}) }
+      if (rooms[server] && rooms[server][project]) {
+        rooms[server] = { ...rooms[server], [project]: rooms[server][project].filter(r => r !== room) }
+        // Si el proyecto queda vacío, eliminar la clave del proyecto
+        if (rooms[server][project].length === 0) {
+          const { [project]: _, ...rest } = rooms[server]
+          rooms[server] = rest
+        }
+        const newData = { ...data, rooms }
+        onUpdate(newData)
+      }
+    }
   }
 
   const handleDeleteProject = (server, project) => {
@@ -221,6 +256,12 @@ function AdminPanel({ data, onUpdate, onClose }) {
             Proyectos
           </button>
           <button
+            className={`tab-btn ${activeTab === 'rooms' ? 'active' : ''}`}
+            onClick={() => setActiveTab('rooms')}
+          >
+            Salas
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'teammates' ? 'active' : ''}`}
             onClick={() => setActiveTab('teammates')}
           >
@@ -320,6 +361,78 @@ function AdminPanel({ data, onUpdate, onClose }) {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tab Salas */}
+        {activeTab === 'rooms' && (
+          <div className="tab-content active">
+            <h3>Gestionar Salas</h3>
+            <div className="admin-form">
+              <select
+                className="form-control"
+                value={formData.serverForRoom}
+                onChange={(e) => setFormData({ ...formData, serverForRoom: e.target.value, projectForRoom: '' })}
+              >
+                <option value="">Seleccionar servidor</option>
+                {data.servers.map((server, index) => (
+                  <option key={index} value={server}>
+                    {server}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="form-control"
+                value={formData.projectForRoom}
+                onChange={(e) => setFormData({ ...formData, projectForRoom: e.target.value })}
+                disabled={!formData.serverForRoom || !(data.projects[formData.serverForRoom] && data.projects[formData.serverForRoom].length)}
+              >
+                <option value="">Seleccionar proyecto</option>
+                {(data.projects[formData.serverForRoom] || []).map((project, idx) => (
+                  <option key={idx} value={project}>{project}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nombre de la sala"
+                value={formData.newRoom}
+                onChange={(e) => setFormData({ ...formData, newRoom: e.target.value })}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddRoom()}
+              />
+              <button className="btn btn-secondary" onClick={handleAddRoom}>
+                Agregar Sala
+              </button>
+            </div>
+            <div className="projects-by-server">
+              {data.servers.map((server) => (
+                data.rooms && data.rooms[server] && Object.keys(data.rooms[server]).length > 0 && (
+                  <div key={server} className="server-projects">
+                    <h4>{server}</h4>
+                    {Object.keys(data.rooms[server]).map((project) => (
+                      data.rooms[server][project] && data.rooms[server][project].length > 0 && (
+                        <div key={`${server}-${project}`} className="project-rooms">
+                          <h5 className="project-subtitle">{project}</h5>
+                          <ul className="admin-list">
+                            {data.rooms[server][project].map((room, index) => (
+                              <li key={index}>
+                                <span>{room}</span>
+                                <button
+                                  className="delete-btn"
+                                  onClick={() => handleDeleteRoom(server, project, room)}
+                                >
+                                  Eliminar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    ))}
                   </div>
                 )
               ))}

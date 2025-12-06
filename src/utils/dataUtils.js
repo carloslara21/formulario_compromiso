@@ -6,6 +6,13 @@ const initialData = {
     '6TO PY INNOVACION': ['PROYECTO INNOVACION 1', 'PROYECTO INNOVACION 2'],
     'LABORATORIOS': ['LABORATORIO A', 'LABORATORIO B']
   },
+  rooms: {
+    'RPSOFT': {
+      'GENERAL': ['SALA GENERAL']
+    },
+    '6TO PY INNOVACION': {},
+    'LABORATORIOS': {}
+  },
   teammates: {
     'RPSOFT': {
       'RV3': ['Juan Pérez', 'María García', 'Carlos López'],
@@ -48,9 +55,24 @@ export function loadData() {
     try {
       const parsed = JSON.parse(savedData)
       // Fusionar con datos iniciales para asegurar estructura completa
+      // Normalizar 'rooms' para aceptar ambas formas (antigua: array por servidor, nueva: objeto por servidor->proyecto->salas)
+      const mergedRooms = { ...initialData.rooms }
+      if (parsed.rooms) {
+        Object.keys(parsed.rooms).forEach(server => {
+          const val = parsed.rooms[server]
+          if (Array.isArray(val)) {
+            // migrar array antiguo a proyecto 'GENERAL'
+            mergedRooms[server] = { ...(mergedRooms[server] || {}), GENERAL: val }
+          } else if (typeof val === 'object' && val !== null) {
+            mergedRooms[server] = { ...(mergedRooms[server] || {}), ...val }
+          }
+        })
+      }
+
       return {
         servers: parsed.servers || initialData.servers,
         projects: { ...initialData.projects, ...parsed.projects },
+        rooms: mergedRooms,
         teammates: { ...initialData.teammates, ...parsed.teammates },
         questions: parsed.questions || initialData.questions,
         evaluations: parsed.evaluations || []
