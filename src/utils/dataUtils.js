@@ -15,21 +15,35 @@ const initialData = {
   },
   teammates: {
     'RPSOFT': {
-      'RV3': ['Juan Pérez', 'María García', 'Carlos López'],
-      'AV1': ['Ana Martínez', 'Pedro Rodríguez'],
-      'API-REST-GHL': ['Laura Sánchez', 'Diego Torres'],
-      'CRM-URBANY v1': ['Sofia Ramírez', 'Miguel González'],
-      'CRM-URBANY v2': ['Elena Fernández', 'Javier Ruiz'],
-      'PHP - INTEGRACION': ['Carmen Díaz', 'Roberto Morales'],
-      'PROYECTO X': ['Isabel Jiménez', 'Fernando Castro']
+      'RV3': {
+        'SALA GENERAL': ['Juan Pérez', 'María García', 'Carlos López']
+      },
+      'AV1': {
+        'SALA GENERAL': ['Ana Martínez', 'Pedro Rodríguez']
+      },
+      'API-REST-GHL': {
+        'SALA GENERAL': ['Laura Sánchez', 'Diego Torres']
+      },
+      'CRM-URBANY v1': {
+        'SALA GENERAL': ['Sofia Ramírez', 'Miguel González']
+      },
+      'CRM-URBANY v2': {
+        'SALA GENERAL': ['Elena Fernández', 'Javier Ruiz']
+      },
+      'PHP - INTEGRACION': {
+        'SALA GENERAL': ['Carmen Díaz', 'Roberto Morales']
+      },
+      'PROYECTO X': {
+        'SALA GENERAL': ['Isabel Jiménez', 'Fernando Castro']
+      }
     },
     '6TO PY INNOVACION': {
-      'PROYECTO INNOVACION 1': ['Compañero 1', 'Compañero 2'],
-      'PROYECTO INNOVACION 2': ['Compañero 3', 'Compañero 4']
+      'PROYECTO INNOVACION 1': {},
+      'PROYECTO INNOVACION 2': {}
     },
     'LABORATORIOS': {
-      'LABORATORIO A': ['Investigador 1', 'Investigador 2'],
-      'LABORATORIO B': ['Investigador 3', 'Investigador 4']
+      'LABORATORIO A': {},
+      'LABORATORIO B': {}
     }
   },
   questions: [
@@ -55,17 +69,26 @@ export function loadData() {
     try {
       const parsed = JSON.parse(savedData)
       // Fusionar con datos iniciales para asegurar estructura completa
-      // Normalizar 'rooms' para aceptar ambas formas (antigua: array por servidor, nueva: objeto por servidor->proyecto->salas)
-      const mergedRooms = { ...initialData.rooms }
-      if (parsed.rooms) {
-        Object.keys(parsed.rooms).forEach(server => {
-          const val = parsed.rooms[server]
-          if (Array.isArray(val)) {
-            // migrar array antiguo a proyecto 'GENERAL'
-            mergedRooms[server] = { ...(mergedRooms[server] || {}), GENERAL: val }
-          } else if (typeof val === 'object' && val !== null) {
-            mergedRooms[server] = { ...(mergedRooms[server] || {}), ...val }
-          }
+      // Normalizar 'teammates' para aceptar la forma antigua (server->project->[teammates]) y migrar a nueva (server->project->room->[teammates])
+      const mergedTeammates = {}
+      Object.keys(initialData.teammates).forEach(server => {
+        mergedTeammates[server] = {}
+        Object.keys(initialData.teammates[server]).forEach(project => {
+          mergedTeammates[server][project] = { ...initialData.teammates[server][project] }
+        })
+      })
+      if (parsed.teammates) {
+        Object.keys(parsed.teammates).forEach(server => {
+          mergedTeammates[server] = mergedTeammates[server] || {}
+          Object.keys(parsed.teammates[server]).forEach(project => {
+            const val = parsed.teammates[server][project]
+            if (Array.isArray(val)) {
+              // migrar array antiguo a sala 'SALA GENERAL'
+              mergedTeammates[server][project] = { ...(mergedTeammates[server][project] || {}), 'SALA GENERAL': val }
+            } else if (typeof val === 'object' && val !== null) {
+              mergedTeammates[server][project] = { ...(mergedTeammates[server][project] || {}), ...val }
+            }
+          })
         })
       }
 
@@ -73,7 +96,7 @@ export function loadData() {
         servers: parsed.servers || initialData.servers,
         projects: { ...initialData.projects, ...parsed.projects },
         rooms: mergedRooms,
-        teammates: { ...initialData.teammates, ...parsed.teammates },
+        teammates: mergedTeammates,
         questions: parsed.questions || initialData.questions,
         evaluations: parsed.evaluations || []
       }

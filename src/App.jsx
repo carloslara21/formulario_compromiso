@@ -12,10 +12,11 @@ import './App.css'
 
 function App() {
   const [data, setData] = useState(loadData())
-  const [step, setStep] = useState(0) // 0: Email, 1: Server, 2: Project, 3: Teammate, 4: Evaluation
+  const [step, setStep] = useState(0) // 0: Email, 1: Server, 2: Project, 3: Room, 4: Teammate, 5: Evaluation
   const [email, setEmail] = useState('')
   const [selectedServer, setSelectedServer] = useState('')
   const [selectedProject, setSelectedProject] = useState('')
+  const [selectedRoom, setSelectedRoom] = useState('')
   const [selectedTeammate, setSelectedTeammate] = useState('')
   const [evaluationAnswers, setEvaluationAnswers] = useState({})
   const [showAdmin, setShowAdmin] = useState(false)
@@ -67,10 +68,14 @@ function App() {
         newErrors.project = 'Esta pregunta es obligatoria.'
       }
     } else if (step === 3) {
+      if (!selectedRoom) {
+        newErrors.room = 'Esta pregunta es obligatoria.'
+      }
+    } else if (step === 4) {
       if (!selectedTeammate) {
         newErrors.teammate = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 4) {
+    } else if (step === 5) {
       data.questions.forEach((_, index) => {
         if (!evaluationAnswers[index] || evaluationAnswers[index].trim() === '') {
           newErrors[`question_${index}`] = 'Esta pregunta es obligatoria.'
@@ -104,6 +109,7 @@ function App() {
   const handleServerSelect = (server) => {
     setSelectedServer(server)
     setSelectedProject('')
+    setSelectedRoom('')
     setSelectedTeammate('')
     if (errors.server) {
       setErrors({ ...errors, server: '' })
@@ -112,9 +118,18 @@ function App() {
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project)
+    setSelectedRoom('')
     setSelectedTeammate('')
     if (errors.project) {
       setErrors({ ...errors, project: '' })
+    }
+  }
+
+  const handleRoomSelect = (room) => {
+    setSelectedRoom(room)
+    setSelectedTeammate('')
+    if (errors.room) {
+      setErrors({ ...errors, room: '' })
     }
   }
 
@@ -148,6 +163,7 @@ function App() {
       email: email,
       server: selectedServer,
       project: selectedProject,
+      room: selectedRoom,
       teammate: selectedTeammate,
       answers: evaluationAnswers,
       date: new Date().toISOString()
@@ -166,6 +182,7 @@ function App() {
     setEmail('')
     setSelectedServer('')
     setSelectedProject('')
+    setSelectedRoom('')
     setSelectedTeammate('')
     setEvaluationAnswers({})
     setErrors({})
@@ -181,7 +198,7 @@ function App() {
     saveData(newData)
   }
 
-  const totalSteps = 5 // 0-4
+  const totalSteps = 6 // 0-5
 
   return (
     <div className="app">
@@ -254,11 +271,35 @@ function App() {
           </>
         )}
 
-        {/* Paso 3: Compañero */}
+        {/* Paso 3: Sala */}
         {step === 3 && (
           <>
+            <ProjectSelection
+              projects={data.rooms[selectedServer]?.[selectedProject] || []}
+              server={selectedServer}
+              selectedProject={selectedRoom}
+              onSelect={handleRoomSelect}
+              error={errors.room}
+              show={true}
+              title="Selecciona una Sala"
+              subtitle="¿En qué sala se encuentra?"
+            />
+            <NavigationButtons
+              currentStep={step}
+              totalSteps={totalSteps}
+              onBack={handleBack}
+              onNext={handleNext}
+              canGoBack={true}
+              canGoNext={true}
+            />
+          </>
+        )}
+
+        {/* Paso 4: Compañero */}
+        {step === 4 && (
+          <>
             <TeammateSelection
-              teammates={data.teammates[selectedServer]?.[selectedProject] || []}
+              teammates={data.teammates[selectedServer]?.[selectedProject]?.[selectedRoom] || []}
               selectedTeammate={selectedTeammate}
               onSelect={handleTeammateSelect}
               error={errors.teammate}
@@ -275,8 +316,8 @@ function App() {
           </>
         )}
 
-        {/* Paso 4: Evaluación */}
-        {step === 4 && (
+        {/* Paso 5: Evaluación */}
+        {step === 5 && (
           <>
             <EvaluationForm
               questions={data.questions}

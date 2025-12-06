@@ -1,20 +1,23 @@
 import './FormSection.css'
 
-function ProjectSelection({ projects, server, selectedProject, onSelect, error, show }) {
+function ProjectSelection({ projects, server, selectedProject, onSelect, error, show, title, subtitle }) {
   const handleChange = (e) => {
     onSelect(e.target.value)
   }
 
   if (!show) return null
 
+  const defaultTitle = title || `PROYECTOS DEL SERVIDOR ${server}`
+  const defaultSubtitle = subtitle || 'Elije tu proyecto'
+
   return (
     <section className={`form-section ${error ? 'error' : ''}`}>
       <div className="section-header">
-        <h2>PROYECTOS DEL SERVIDOR {server}</h2>
+        <h2>{defaultTitle}</h2>
       </div>
       <div className="form-content">
         <label htmlFor="project-select">
-          Elije tu proyecto <span className="required">*</span>
+          {defaultSubtitle} <span className="required">*</span>
         </label>
         <select
           id="project-select"

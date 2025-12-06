@@ -12,10 +12,15 @@ function AdminPanel({ data, onUpdate, onClose }) {
     serverForProject: '',
     serverForRoom: '',
     projectForRoom: '',
-    projectForTeammate: ''
+    serverForTeammate: '',
+    projectForTeammate: '',
+    roomForTeammate: ''
   })
   const [filterServer, setFilterServer] = useState('')
   const [filterProject, setFilterProject] = useState('')
+  const [collapsedServers, setCollapsedServers] = useState({}) // { server: true/false }
+  const [collapsedProjects, setCollapsedProjects] = useState({}) // { 'server|project': true/false }
+  const [collapsedRooms, setCollapsedRooms] = useState({}) // { 'server|project|room': true/false }
 
   const handleAddServer = () => {
     if (!formData.newServer.trim()) return
@@ -114,26 +119,32 @@ function AdminPanel({ data, onUpdate, onClose }) {
   }
 
   const handleAddTeammate = () => {
-    if (!formData.projectForTeammate || !formData.newTeammate.trim()) return
-    const [server, project] = formData.projectForTeammate.split('|')
+    if (!formData.serverForTeammate || !formData.projectForTeammate || !formData.roomForTeammate || !formData.newTeammate.trim()) return
+    const server = formData.serverForTeammate
+    const project = formData.projectForTeammate
+    const room = formData.roomForTeammate
+    
     const newData = {
       ...data,
       teammates: {
         ...data.teammates,
         [server]: {
           ...(data.teammates[server] || {}),
-          [project]: [
-            ...(data.teammates[server]?.[project] || []),
-            formData.newTeammate.trim()
-          ]
+          [project]: {
+            ...(data.teammates[server]?.[project] || {}),
+            [room]: [
+              ...(data.teammates[server]?.[project]?.[room] || []),
+              formData.newTeammate.trim()
+            ]
+          }
         }
       }
     }
     onUpdate(newData)
-    setFormData({ ...formData, newTeammate: '', projectForTeammate: '' })
+    setFormData({ ...formData, newTeammate: '', roomForTeammate: '' })
   }
 
-  const handleDeleteTeammate = (server, project, teammate) => {
+  const handleDeleteTeammate = (server, project, room, teammate) => {
     if (window.confirm(`¿Está seguro de eliminar al compañero "${teammate}"?`)) {
       const newData = {
         ...data,
@@ -141,12 +152,29 @@ function AdminPanel({ data, onUpdate, onClose }) {
           ...data.teammates,
           [server]: {
             ...data.teammates[server],
-            [project]: data.teammates[server][project].filter(t => t !== teammate)
+            [project]: {
+              ...data.teammates[server][project],
+              [room]: data.teammates[server][project][room].filter(t => t !== teammate)
+            }
           }
         }
       }
       onUpdate(newData)
     }
+  }
+
+  const toggleServerCollapse = (server) => {
+    setCollapsedServers({ ...collapsedServers, [server]: !collapsedServers[server] })
+  }
+
+  const toggleProjectCollapse = (server, project) => {
+    const key = `${server}|${project}`
+    setCollapsedProjects({ ...collapsedProjects, [key]: !collapsedProjects[key] })
+  }
+
+  const toggleRoomCollapse = (server, project, room) => {
+    const key = `${server}|${project}|${room}`
+    setCollapsedRooms({ ...collapsedRooms, [key]: !collapsedRooms[key] })
   }
 
   const handleAddQuestion = () => {
@@ -447,14 +475,36 @@ function AdminPanel({ data, onUpdate, onClose }) {
             <div className="admin-form">
               <select
                 className="form-control"
+                value={formData.serverForTeammate}
+                onChange={(e) => setFormData({ ...formData, serverForTeammate: e.target.value, projectForTeammate: '', roomForTeammate: '' })}
+              >
+                <option value="">Seleccionar servidor</option>
+                {data.servers.map((server, index) => (
+                  <option key={index} value={server}>
+                    {server}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="form-control"
                 value={formData.projectForTeammate}
-                onChange={(e) => setFormData({ ...formData, projectForTeammate: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, projectForTeammate: e.target.value, roomForTeammate: '' })}
+                disabled={!formData.serverForTeammate || !(data.projects[formData.serverForTeammate] && data.projects[formData.serverForTeammate].length)}
               >
                 <option value="">Seleccionar proyecto</option>
-                {getAllProjectsForTeammate().map((item, index) => (
-                  <option key={index} value={`${item.server}|${item.project}`}>
-                    {item.label}
-                  </option>
+                {(data.projects[formData.serverForTeammate] || []).map((project, idx) => (
+                  <option key={idx} value={project}>{project}</option>
+                ))}
+              </select>
+              <select
+                className="form-control"
+                value={formData.roomForTeammate}
+                onChange={(e) => setFormData({ ...formData, roomForTeammate: e.target.value })}
+                disabled={!formData.serverForTeammate || !formData.projectForTeammate || !(data.rooms[formData.serverForTeammate]?.[formData.projectForTeammate] && data.rooms[formData.serverForTeammate][formData.projectForTeammate].length)}
+              >
+                <option value="">Seleccionar sala</option>
+                {(data.rooms[formData.serverForTeammate]?.[formData.projectForTeammate] || []).map((room, idx) => (
+                  <option key={idx} value={room}>{room}</option>
                 ))}
               </select>
               <input
@@ -470,27 +520,55 @@ function AdminPanel({ data, onUpdate, onClose }) {
               </button>
             </div>
             <div className="teammates-by-project">
-              {Object.keys(data.teammates).map((server) => (
-                Object.keys(data.teammates[server] || {}).map((project) => (
-                  data.teammates[server][project] && data.teammates[server][project].length > 0 && (
-                    <div key={`${server}-${project}`} className="project-teammates">
-                      <h4>{server} - {project}</h4>
-                      <ul className="admin-list">
-                        {data.teammates[server][project].map((teammate, index) => (
-                          <li key={index}>
-                            <span>{teammate}</span>
-                            <button
-                              className="delete-btn"
-                              onClick={() => handleDeleteTeammate(server, project, teammate)}
-                            >
-                              Eliminar
-                            </button>
-                          </li>
+              {data.servers.map((server) => (
+                data.teammates[server] && Object.keys(data.teammates[server]).length > 0 && (
+                  <div key={server} className="server-teammates">
+                    <h4 onClick={() => toggleServerCollapse(server)} style={{ cursor: 'pointer' }}>
+                      {collapsedServers[server] ? '▶ ' : '▼ '}{server}
+                    </h4>
+                    {!collapsedServers[server] && (
+                      <>
+                        {Object.keys(data.teammates[server]).map((project) => (
+                          data.teammates[server][project] && Object.keys(data.teammates[server][project]).length > 0 && (
+                            <div key={`${server}-${project}`} className="project-teammates" style={{ marginLeft: '20px' }}>
+                              <h5 onClick={() => toggleProjectCollapse(server, project)} style={{ cursor: 'pointer' }}>
+                                {collapsedProjects[`${server}|${project}`] ? '▶ ' : '▼ '}{project}
+                              </h5>
+                              {!collapsedProjects[`${server}|${project}`] && (
+                                <>
+                                  {Object.keys(data.teammates[server][project]).map((room) => (
+                                    data.teammates[server][project][room] && data.teammates[server][project][room].length > 0 && (
+                                      <div key={`${server}-${project}-${room}`} className="room-teammates" style={{ marginLeft: '40px' }}>
+                                        <h6 onClick={() => toggleRoomCollapse(server, project, room)} style={{ cursor: 'pointer' }}>
+                                          {collapsedRooms[`${server}|${project}|${room}`] ? '▶ ' : '▼ '}{room}
+                                        </h6>
+                                        {!collapsedRooms[`${server}|${project}|${room}`] && (
+                                          <ul className="admin-list" style={{ marginLeft: '20px' }}>
+                                            {data.teammates[server][project][room].map((teammate, index) => (
+                                              <li key={index}>
+                                                <span>{teammate}</span>
+                                                <button
+                                                  className="delete-btn"
+                                                  onClick={() => handleDeleteTeammate(server, project, room, teammate)}
+                                                >
+                                                  Eliminar
+                                                </button>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                      </div>
+                                    )
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          )
                         ))}
-                      </ul>
-                    </div>
-                  )
-                ))
+                      </>
+                    )}
+                  </div>
+                )
               ))}
             </div>
           </div>
