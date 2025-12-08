@@ -19,6 +19,7 @@ function App() {
   const [selectedProject, setSelectedProject] = useState('')
   const [selectedRoom, setSelectedRoom] = useState('')
   const [selectedTeammate, setSelectedTeammate] = useState('')
+  const [evaluatedTeammates, setEvaluatedTeammates] = useState([]) // Lista de compañeros ya evaluados
   const [evaluationAnswers, setEvaluationAnswers] = useState({})
   const [showAdmin, setShowAdmin] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -175,7 +176,13 @@ function App() {
     const teammates = data.teammates[selectedServer]?.[selectedProject]?.[selectedRoom] || []
     // Excluir al usuario actual (case-insensitive)
     const usernameLower = username.toLowerCase().trim()
-    return teammates.filter(t => t.toLowerCase() !== usernameLower)
+    return teammates.filter(t => {
+      // Excluir usuario actual
+      if (t.toLowerCase() === usernameLower) return false
+      // Excluir ya evaluados
+      if (evaluatedTeammates.includes(t)) return false
+      return true
+    })
   }
 
   const handleAnswerChange = (questionIndex, answer) => {
@@ -216,21 +223,41 @@ function App() {
     setData(newData)
     saveData(newData)
 
-    // Reset form
-    setStep(0)
-    setUsername('')
-    setEmail('')
-    setSelectedServer('')
-    setSelectedProject('')
-    setSelectedRoom('')
-    setSelectedTeammate('')
-    setEvaluationAnswers({})
-    setErrors({})
-    setShowSuccess(true)
+    // Agregar compañero a la lista de evaluados
+    const newEvaluated = [...evaluatedTeammates, selectedTeammate]
+    setEvaluatedTeammates(newEvaluated)
 
-    setTimeout(() => {
-      setShowSuccess(false)
-    }, 5000)
+    // Obtener compañeros disponibles (excluyen usuario actual y ya evaluados)
+    const allTeammates = data.teammates[selectedServer]?.[selectedProject]?.[selectedRoom] || []
+    const usernameLower = username.toLowerCase().trim()
+    const remaining = allTeammates.filter(t => 
+      t.toLowerCase() !== usernameLower && !newEvaluated.includes(t)
+    )
+
+    // Si hay más compañeros por evaluar, volver al paso 5 (selección de compañero)
+    if (remaining.length > 0) {
+      setStep(5)
+      setSelectedTeammate('')
+      setEvaluationAnswers({})
+      setErrors({})
+    } else {
+      // Si no hay más, mostrar éxito y resetear
+      setStep(0)
+      setUsername('')
+      setEmail('')
+      setSelectedServer('')
+      setSelectedProject('')
+      setSelectedRoom('')
+      setSelectedTeammate('')
+      setEvaluatedTeammates([])
+      setEvaluationAnswers({})
+      setErrors({})
+      setShowSuccess(true)
+
+      setTimeout(() => {
+        setShowSuccess(false)
+      }, 5000)
+    }
   }
 
   const updateData = (newData) => {
