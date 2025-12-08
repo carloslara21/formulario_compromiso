@@ -264,6 +264,26 @@ function AdminPanel({ data, onUpdate, onClose }) {
     link.click()
   }
 
+  const handleExportBackup = () => {
+    // Crear backup completo de toda la data del admin
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      servers: data.servers,
+      projects: data.projects,
+      rooms: data.rooms,
+      teammates: data.teammates,
+      questions: data.questions,
+      evaluations: data.evaluations
+    }
+
+    const jsonStr = JSON.stringify(backupData, null, 2)
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `backup_admin_${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+  }
+
   // Obtener todos los proyectos para el selector de compañeros
   const getAllProjectsForTeammate = () => {
     const allProjects = []
@@ -666,6 +686,9 @@ function AdminPanel({ data, onUpdate, onClose }) {
               </select>
               <button className="btn btn-secondary" onClick={handleExportCSV}>
                 Exportar CSV
+              </button>
+              <button className="btn btn-secondary" onClick={handleExportBackup}>
+                Descargar Backup
               </button>
             </div>
             <div className="data-display">

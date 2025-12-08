@@ -12,7 +12,8 @@ import './App.css'
 
 function App() {
   const [data, setData] = useState(loadData())
-  const [step, setStep] = useState(0) // 0: Email, 1: Server, 2: Project, 3: Room, 4: Teammate, 5: Evaluation
+  const [step, setStep] = useState(0) // 0: Username, 1: Email, 2: Server, 3: Project, 4: Room, 5: Teammate, 6: Evaluation
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [selectedServer, setSelectedServer] = useState('')
   const [selectedProject, setSelectedProject] = useState('')
@@ -54,28 +55,32 @@ function App() {
     const newErrors = {}
 
     if (step === 0) {
+      if (!username || username.trim() === '') {
+        newErrors.username = 'El nombre de usuario es obligatorio.'
+      }
+    } else if (step === 1) {
       if (!email || email.trim() === '') {
         newErrors.email = 'El correo electrónico es obligatorio.'
       } else if (!validateEmail(email)) {
         newErrors.email = 'Por favor, ingrese un correo electrónico válido.'
       }
-    } else if (step === 1) {
+    } else if (step === 2) {
       if (!selectedServer) {
         newErrors.server = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 2) {
+    } else if (step === 3) {
       if (!selectedProject) {
         newErrors.project = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 3) {
+    } else if (step === 4) {
       if (!selectedRoom) {
         newErrors.room = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 4) {
+    } else if (step === 5) {
       if (!selectedTeammate) {
         newErrors.teammate = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 5) {
+    } else if (step === 6) {
       data.questions.forEach((_, index) => {
         if (!evaluationAnswers[index] || evaluationAnswers[index].trim() === '') {
           newErrors[`question_${index}`] = 'Esta pregunta es obligatoria.'
@@ -99,11 +104,36 @@ function App() {
     setErrors({})
   }
 
+  const handleUsernameChange = (value) => {
+    setUsername(value)
+    if (errors.username) {
+      setErrors({ ...errors, username: '' })
+    }
+  }
+
   const handleEmailChange = (value) => {
     setEmail(value)
     if (errors.email) {
       setErrors({ ...errors, email: '' })
     }
+  }
+
+  // Buscar si el usuario existe en la BD de compañeros (case-insensitive)
+  const findUserInDatabase = (name) => {
+    const nameLower = name.toLowerCase().trim()
+    for (const server of Object.keys(data.teammates)) {
+      for (const project of Object.keys(data.teammates[server])) {
+        for (const room of Object.keys(data.teammates[server][project])) {
+          const teammate = data.teammates[server][project][room].find(
+            t => t.toLowerCase() === nameLower
+          )
+          if (teammate) {
+            return { server, project, room, teammate }
+          }
+        }
+      }
+    }
+    return null
   }
 
   const handleServerSelect = (server) => {
@@ -140,6 +170,14 @@ function App() {
     }
   }
 
+  // Obtener lista de compañeros excluyendo al usuario actual
+  const getAvailableTeammates = () => {
+    const teammates = data.teammates[selectedServer]?.[selectedProject]?.[selectedRoom] || []
+    // Excluir al usuario actual (case-insensitive)
+    const usernameLower = username.toLowerCase().trim()
+    return teammates.filter(t => t.toLowerCase() !== usernameLower)
+  }
+
   const handleAnswerChange = (questionIndex, answer) => {
     setEvaluationAnswers({
       ...evaluationAnswers,
@@ -160,6 +198,7 @@ function App() {
     // Guardar evaluación
     const evaluation = {
       id: Date.now(),
+      username: username,
       email: email,
       server: selectedServer,
       project: selectedProject,
@@ -179,6 +218,7 @@ function App() {
 
     // Reset form
     setStep(0)
+    setUsername('')
     setEmail('')
     setSelectedServer('')
     setSelectedProject('')
@@ -198,7 +238,7 @@ function App() {
     saveData(newData)
   }
 
-  const totalSteps = 6 // 0-5
+  const totalSteps = 7 // 0-6 (Username, Email, Server, Project, Room, Teammate, Evaluation)
 
   return (
     <div className="app">
@@ -210,14 +250,30 @@ function App() {
       <div className="container">
         {showSuccess && <SuccessMessage />}
 
-        {/* Paso 0: Email */}
+        {/* Paso 0: Nombre de Usuario */}
         {step === 0 && (
           <>
-            <EmailInput
-              email={email}
-              onEmailChange={handleEmailChange}
-              error={errors.email}
-            />
+            <div style={{ padding: '20px', backgroundColor: '#f5f5f5', borderRadius: '8px', marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+                Nombre de Usuario *
+              </label>
+              <input
+                type="text"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+                placeholder="Ingresa tu nombre de usuario"
+                value={username}
+                onChange={(e) => handleUsernameChange(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleNext()}
+              />
+              {errors.username && <p style={{ color: '#d32f2f', marginTop: '5px' }}>{errors.username}</p>}
+            </div>
             <NavigationButtons
               currentStep={step}
               totalSteps={totalSteps}
@@ -228,8 +284,27 @@ function App() {
           </>
         )}
 
-        {/* Paso 1: Servidor */}
+        {/* Paso 1: Email */}
         {step === 1 && (
+          <>
+            <EmailInput
+              email={email}
+              onEmailChange={handleEmailChange}
+              error={errors.email}
+            />
+            <NavigationButtons
+              currentStep={step}
+              totalSteps={totalSteps}
+              onBack={handleBack}
+              onNext={handleNext}
+              canGoBack={true}
+              canGoNext={true}
+            />
+          </>
+        )}
+
+        {/* Paso 2: Servidor */}
+        {step === 2 && (
           <>
             <ServerSelection
               servers={data.servers}
@@ -249,8 +324,8 @@ function App() {
           </>
         )}
 
-        {/* Paso 2: Proyecto */}
-        {step === 2 && (
+        {/* Paso 3: Proyecto */}
+        {step === 3 && (
           <>
             <ProjectSelection
               projects={data.projects[selectedServer] || []}
@@ -271,8 +346,8 @@ function App() {
           </>
         )}
 
-        {/* Paso 3: Sala */}
-        {step === 3 && (
+        {/* Paso 4: Sala */}
+        {step === 4 && (
           <>
             <ProjectSelection
               projects={data.rooms[selectedServer]?.[selectedProject] || []}
@@ -295,11 +370,11 @@ function App() {
           </>
         )}
 
-        {/* Paso 4: Compañero */}
-        {step === 4 && (
+        {/* Paso 5: Compañero */}
+        {step === 5 && (
           <>
             <TeammateSelection
-              teammates={data.teammates[selectedServer]?.[selectedProject]?.[selectedRoom] || []}
+              teammates={getAvailableTeammates()}
               selectedTeammate={selectedTeammate}
               onSelect={handleTeammateSelect}
               error={errors.teammate}
@@ -316,8 +391,8 @@ function App() {
           </>
         )}
 
-        {/* Paso 5: Evaluación */}
-        {step === 5 && (
+        {/* Paso 6: Evaluación */}
+        {step === 6 && (
           <>
             <EvaluationForm
               questions={data.questions}
