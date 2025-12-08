@@ -21,6 +21,8 @@ function AdminPanel({ data, onUpdate, onClose }) {
   const [collapsedServers, setCollapsedServers] = useState({}) // { server: true/false }
   const [collapsedProjects, setCollapsedProjects] = useState({}) // { 'server|project': true/false }
   const [collapsedRooms, setCollapsedRooms] = useState({}) // { 'server|project|room': true/false }
+  const [collapsedServersRooms, setCollapsedServersRooms] = useState({}) // { server: true/false } para salas
+  const [collapsedProjectsRooms, setCollapsedProjectsRooms] = useState({}) // { 'server|project': true/false } para salas
 
   const handleAddServer = () => {
     if (!formData.newServer.trim()) return
@@ -175,6 +177,15 @@ function AdminPanel({ data, onUpdate, onClose }) {
   const toggleRoomCollapse = (server, project, room) => {
     const key = `${server}|${project}|${room}`
     setCollapsedRooms({ ...collapsedRooms, [key]: !collapsedRooms[key] })
+  }
+
+  const toggleServerRoomCollapse = (server) => {
+    setCollapsedServersRooms({ ...collapsedServersRooms, [server]: !collapsedServersRooms[server] })
+  }
+
+  const toggleProjectRoomCollapse = (server, project) => {
+    const key = `${server}|${project}`
+    setCollapsedProjectsRooms({ ...collapsedProjectsRooms, [key]: !collapsedProjectsRooms[key] })
   }
 
   const handleAddQuestion = () => {
@@ -440,27 +451,37 @@ function AdminPanel({ data, onUpdate, onClose }) {
               {data.servers.map((server) => (
                 data.rooms && data.rooms[server] && Object.keys(data.rooms[server]).length > 0 && (
                   <div key={server} className="server-projects">
-                    <h4>{server}</h4>
-                    {Object.keys(data.rooms[server]).map((project) => (
-                      data.rooms[server][project] && data.rooms[server][project].length > 0 && (
-                        <div key={`${server}-${project}`} className="project-rooms">
-                          <h5 className="project-subtitle">{project}</h5>
-                          <ul className="admin-list">
-                            {data.rooms[server][project].map((room, index) => (
-                              <li key={index}>
-                                <span>{room}</span>
-                                <button
-                                  className="delete-btn"
-                                  onClick={() => handleDeleteRoom(server, project, room)}
-                                >
-                                  Eliminar
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )
-                    ))}
+                    <h4 onClick={() => toggleServerRoomCollapse(server)} style={{ cursor: 'pointer' }}>
+                      {collapsedServersRooms[server] ? '▶ ' : '▼ '}{server}
+                    </h4>
+                    {!collapsedServersRooms[server] && (
+                      <>
+                        {Object.keys(data.rooms[server]).map((project) => (
+                          data.rooms[server][project] && data.rooms[server][project].length > 0 && (
+                            <div key={`${server}-${project}`} className="project-rooms" style={{ marginLeft: '20px' }}>
+                              <h5 className="project-subtitle" onClick={() => toggleProjectRoomCollapse(server, project)} style={{ cursor: 'pointer' }}>
+                                {collapsedProjectsRooms[`${server}|${project}`] ? '▶ ' : '▼ '}{project}
+                              </h5>
+                              {!collapsedProjectsRooms[`${server}|${project}`] && (
+                                <ul className="admin-list" style={{ marginLeft: '20px' }}>
+                                  {data.rooms[server][project].map((room, index) => (
+                                    <li key={index}>
+                                      <span>{room}</span>
+                                      <button
+                                        className="delete-btn"
+                                        onClick={() => handleDeleteRoom(server, project, room)}
+                                      >
+                                        Eliminar
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )
+                        ))}
+                      </>
+                    )}
                   </div>
                 )
               ))}
