@@ -12,27 +12,25 @@ import './App.css'
 
 function App() {
   const [data, setData] = useState(loadData())
-  const [step, setStep] = useState(0) // 0: Username, 1: Email, 2: Server, 3: Project, 4: Room, 5: Teammate, 6: Evaluation
+  const [step, setStep] = useState(0)
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [selectedServer, setSelectedServer] = useState('')
   const [selectedProject, setSelectedProject] = useState('')
   const [selectedRoom, setSelectedRoom] = useState('')
   const [selectedTeammate, setSelectedTeammate] = useState('')
-  const [evaluatedTeammates, setEvaluatedTeammates] = useState([]) // Lista de compañeros ya evaluados
+  const [evaluatedTeammates, setEvaluatedTeammates] = useState([])
   const [evaluationAnswers, setEvaluationAnswers] = useState({})
   const [showAdmin, setShowAdmin] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [errors, setErrors] = useState({})
 
-  // Atajo de teclado para panel de administración
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'a') {
         e.preventDefault()
         setShowAdmin(true)
       }
-      // ESC para cerrar panel
       if (e.key === 'Escape' && showAdmin) {
         setShowAdmin(false)
       }
@@ -42,13 +40,12 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showAdmin])
 
-  // Guardar datos cuando cambien
   useEffect(() => {
     saveData(data)
   }, [data])
 
   const validateEmail = (emailValue) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@senati\.pe$/
     return emailRegex.test(emailValue)
   }
 
@@ -59,29 +56,34 @@ function App() {
       if (!username || username.trim() === '') {
         newErrors.username = 'El nombre de usuario es obligatorio.'
       }
-    } else if (step === 1) {
+
       if (!email || email.trim() === '') {
         newErrors.email = 'El correo electrónico es obligatorio.'
       } else if (!validateEmail(email)) {
-        newErrors.email = 'Por favor, ingrese un correo electrónico válido.'
+        newErrors.email = 'Por favor, ingrese un correo que termine en @senati.pe'
       }
-    } else if (step === 2) {
+
+    } else if (step === 1) {
       if (!selectedServer) {
         newErrors.server = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 3) {
+
+    } else if (step === 2) {
       if (!selectedProject) {
         newErrors.project = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 4) {
+
+    } else if (step === 3) {
       if (!selectedRoom) {
         newErrors.room = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 5) {
+
+    } else if (step === 4) {
       if (!selectedTeammate) {
         newErrors.teammate = 'Esta pregunta es obligatoria.'
       }
-    } else if (step === 6) {
+
+    } else if (step === 5) {
       data.questions.forEach((_, index) => {
         if (!evaluationAnswers[index] || evaluationAnswers[index].trim() === '') {
           newErrors[`question_${index}`] = 'Esta pregunta es obligatoria.'
@@ -92,6 +94,7 @@ function App() {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+
 
   const handleNext = () => {
     if (validateCurrentStep()) {
@@ -107,19 +110,14 @@ function App() {
 
   const handleUsernameChange = (value) => {
     setUsername(value)
-    if (errors.username) {
-      setErrors({ ...errors, username: '' })
-    }
+    if (errors.username) setErrors({ ...errors, username: '' })
   }
 
   const handleEmailChange = (value) => {
     setEmail(value)
-    if (errors.email) {
-      setErrors({ ...errors, email: '' })
-    }
+    if (errors.email) setErrors({ ...errors, email: '' })
   }
 
-  // Buscar si el usuario existe en la BD de compañeros (case-insensitive)
   const findUserInDatabase = (name) => {
     const nameLower = name.toLowerCase().trim()
     for (const server of Object.keys(data.teammates)) {
@@ -142,44 +140,33 @@ function App() {
     setSelectedProject('')
     setSelectedRoom('')
     setSelectedTeammate('')
-    if (errors.server) {
-      setErrors({ ...errors, server: '' })
-    }
+    if (errors.server) setErrors({ ...errors, server: '' })
   }
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project)
     setSelectedRoom('')
     setSelectedTeammate('')
-    if (errors.project) {
-      setErrors({ ...errors, project: '' })
-    }
+    if (errors.project) setErrors({ ...errors, project: '' })
   }
 
   const handleRoomSelect = (room) => {
     setSelectedRoom(room)
     setSelectedTeammate('')
-    if (errors.room) {
-      setErrors({ ...errors, room: '' })
-    }
+    if (errors.room) setErrors({ ...errors, room: '' })
   }
 
   const handleTeammateSelect = (teammate) => {
     setSelectedTeammate(teammate)
-    if (errors.teammate) {
-      setErrors({ ...errors, teammate: '' })
-    }
+    if (errors.teammate) setErrors({ ...errors, teammate: '' })
   }
 
-  // Obtener lista de compañeros excluyendo al usuario actual
   const getAvailableTeammates = () => {
     const teammates = data.teammates[selectedServer]?.[selectedProject]?.[selectedRoom] || []
-    // Excluir al usuario actual (case-insensitive)
     const usernameLower = username.toLowerCase().trim()
+
     return teammates.filter(t => {
-      // Excluir usuario actual
       if (t.toLowerCase() === usernameLower) return false
-      // Excluir ya evaluados
       if (evaluatedTeammates.includes(t)) return false
       return true
     })
@@ -198,15 +185,12 @@ function App() {
   }
 
   const handleSubmit = () => {
-    if (!validateCurrentStep()) {
-      return
-    }
+    if (!validateCurrentStep()) return
 
-    // Guardar evaluación
     const evaluation = {
       id: Date.now(),
-      username: username,
-      email: email,
+      username,
+      email,
       server: selectedServer,
       project: selectedProject,
       room: selectedRoom,
@@ -223,25 +207,21 @@ function App() {
     setData(newData)
     saveData(newData)
 
-    // Agregar compañero a la lista de evaluados
     const newEvaluated = [...evaluatedTeammates, selectedTeammate]
     setEvaluatedTeammates(newEvaluated)
 
-    // Obtener compañeros disponibles (excluyen usuario actual y ya evaluados)
     const allTeammates = data.teammates[selectedServer]?.[selectedProject]?.[selectedRoom] || []
     const usernameLower = username.toLowerCase().trim()
-    const remaining = allTeammates.filter(t => 
-      t.toLowerCase() !== usernameLower && !newEvaluated.includes(t)
+    const remaining = allTeammates.filter(
+      t => t.toLowerCase() !== usernameLower && !newEvaluated.includes(t)
     )
 
-    // Si hay más compañeros por evaluar, volver al paso 5 (selección de compañero)
     if (remaining.length > 0) {
-      setStep(5)
+      setStep(4)
       setSelectedTeammate('')
       setEvaluationAnswers({})
       setErrors({})
     } else {
-      // Si no hay más, mostrar éxito y resetear
       setStep(0)
       setUsername('')
       setEmail('')
@@ -254,9 +234,7 @@ function App() {
       setErrors({})
       setShowSuccess(true)
 
-      setTimeout(() => {
-        setShowSuccess(false)
-      }, 5000)
+      setTimeout(() => setShowSuccess(false), 5000)
     }
   }
 
@@ -265,7 +243,7 @@ function App() {
     saveData(newData)
   }
 
-  const totalSteps = 7 // 0-6 (Username, Email, Server, Project, Room, Teammate, Evaluation)
+  const totalSteps = 6
 
   return (
     <div className="app">
@@ -277,30 +255,78 @@ function App() {
       <div className="container">
         {showSuccess && <SuccessMessage />}
 
-        {/* Paso 0: Nombre de Usuario */}
+        {/* Paso 0: Email + Username */}
         {step === 0 && (
           <>
-            <div style={{ padding: '20px', backgroundColor: '#f5f5f5', borderRadius: '8px', marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
-                Nombre de Usuario *
-              </label>
-              <input
-                type="text"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd',
-                  fontSize: '16px',
-                  boxSizing: 'border-box'
-                }}
-                placeholder="Ingresa tu nombre de usuario"
-                value={username}
-                onChange={(e) => handleUsernameChange(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleNext()}
-              />
-              {errors.username && <p style={{ color: '#d32f2f', marginTop: '5px' }}>{errors.username}</p>}
+            <div style={{ padding: '30px 20px', backgroundColor: '#fff', borderRadius: '8px', marginBottom: '20px' }}>
+              <div style={{ padding: '20px', backgroundColor: '#f5f5f5', borderRadius: '8px', marginBottom: '20px' }}>
+                <h3 style={{ marginTop: 0, color: '#333' }}>Estimado/a participante:</h3>
+                <p style={{ color: '#555', lineHeight: '1.6' }}>
+                  Esta evaluación forma parte del proceso de análisis y mejora continua de los proyectos desarrollados
+                  por los practicantes del SENATI en la empresa RP SOFT. El propósito de esta evaluación es recopilar
+                  información sobre el desempeño, avances, retos y resultados de cada proyecto, con fines
+                  exclusivamente académicos y formativos.
+                </p>
+              </div>
+
+              <div style={{ 
+                borderLeft: '4px solid #d32f2f',
+                paddingLeft: '15px',
+                marginBottom: '20px',
+                backgroundColor: '#fff3f3',
+                padding: '15px',
+                borderRadius: '4px'
+              }}>
+                <p style={{ color: '#d32f2f', fontWeight: 'bold', margin: '0' }}>
+                  USA TU CORREO INSTITUCIONAL DEL SENATI, NO EL PERSONAL, NO TE PASES DE QUIOSPE.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                  Nombre de Usuario *
+                </label>
+                <input
+                  type="text"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxSizing: 'border-box'
+                  }}
+                  placeholder="Ingresa tu nombre de usuario"
+                  value={username}
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                />
+                {errors.username && <p style={{ color: '#d32f2f', marginTop: '5px', fontSize: '14px' }}>{errors.username}</p>}
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                  Correo electrónico *
+                </label>
+                <input
+                  type="email"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxSizing: 'border-box'
+                  }}
+                  placeholder="tu.correo@senati.pe"
+                  value={email}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleNext()}
+                />
+                {errors.email && <p style={{ color: '#d32f2f', marginTop: '5px', fontSize: '14px' }}>{errors.email}</p>}
+                <p style={{ color: '#999', fontSize: '12px', marginTop: '5px' }}>* Indica que la pregunta es obligatoria</p>
+              </div>
             </div>
+
             <NavigationButtons
               currentStep={step}
               totalSteps={totalSteps}
@@ -310,28 +336,7 @@ function App() {
             />
           </>
         )}
-
-        {/* Paso 1: Email */}
         {step === 1 && (
-          <>
-            <EmailInput
-              email={email}
-              onEmailChange={handleEmailChange}
-              error={errors.email}
-            />
-            <NavigationButtons
-              currentStep={step}
-              totalSteps={totalSteps}
-              onBack={handleBack}
-              onNext={handleNext}
-              canGoBack={true}
-              canGoNext={true}
-            />
-          </>
-        )}
-
-        {/* Paso 2: Servidor */}
-        {step === 2 && (
           <>
             <ServerSelection
               servers={data.servers}
@@ -351,8 +356,8 @@ function App() {
           </>
         )}
 
-        {/* Paso 3: Proyecto */}
-        {step === 3 && (
+        {/* Paso 2: Proyecto */}
+        {step === 2 && (
           <>
             <ProjectSelection
               projects={data.projects[selectedServer] || []}
@@ -373,8 +378,8 @@ function App() {
           </>
         )}
 
-        {/* Paso 4: Sala */}
-        {step === 4 && (
+        {/* Paso 3: Sala */}
+        {step === 3 && (
           <>
             <ProjectSelection
               projects={data.rooms[selectedServer]?.[selectedProject] || []}
@@ -397,8 +402,8 @@ function App() {
           </>
         )}
 
-        {/* Paso 5: Compañero */}
-        {step === 5 && (
+        {/* Paso 4: Compañero */}
+        {step === 4 && (
           <>
             <TeammateSelection
               teammates={getAvailableTeammates()}
@@ -418,23 +423,23 @@ function App() {
           </>
         )}
 
-        {/* Paso 6: Evaluación */}
-        {step === 6 && (
+        {/* Paso 5: Evaluación */}
+        {step === 5 && (
           <>
             <EvaluationForm
               questions={data.questions}
               answers={evaluationAnswers}
               onAnswerChange={handleAnswerChange}
               errors={errors}
-            />
-            <NavigationButtons
-              currentStep={step}
-              totalSteps={totalSteps}
-              onBack={handleBack}
-              onNext={handleSubmit}
-              canGoBack={true}
-              canGoNext={true}
-              nextLabel="Enviar Evaluación"
+              onProceed={handleSubmit}
+              onBackToRoom={() => {
+                setStep(3)
+                setSelectedRoom('')
+                setSelectedTeammate('')
+                setEvaluatedTeammates([])
+                setEvaluationAnswers({})
+                setErrors({})
+              }}
             />
           </>
         )}
