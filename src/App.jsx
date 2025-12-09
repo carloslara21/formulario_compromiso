@@ -97,7 +97,7 @@ function App() {
 
 
   const handleNext = () => {
-    if (validateCurrentStep()) {
+    if (validateCurrentStep()) {    
       setStep(step + 1)
       setErrors({})
     }
