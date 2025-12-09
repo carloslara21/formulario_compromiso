@@ -78,9 +78,40 @@ formulario_compromiso/
 - Vite
 - CSS3 (sin frameworks externos)
 
+## Configuración de Sincronización Remota (Opcional)
+
+**IMPORTANTE:** Si no configuras estas variables, la aplicación funcionará perfectamente guardando solo en localStorage del navegador. No es necesario configurar un servidor.
+
+### ¿Dónde conseguir VITE_API_URL y VITE_API_KEY?
+
+**Opción más simple:** No las necesitas. La app funciona sin ellas.
+
+Si quieres sincronizar datos entre dispositivos, tienes varias opciones:
+
+1. **Servicios gratuitos:** Firebase, Supabase, JSONBin.io
+2. **Crear tu propio servidor:** Node.js/Express, Python/Flask, etc.
+3. **Servicios de hosting:** Vercel, Netlify, Railway
+
+Para más detalles, consulta [GUIA_SERVIDOR.md](./GUIA_SERVIDOR.md)
+
+### Si decides usar un servidor:
+
+Crea un archivo `.env` en la raíz del proyecto con:
+
+```env
+VITE_API_URL=https://tu-api.com
+VITE_API_KEY=tu-clave-de-autorizacion
+```
+
+La API debe aceptar:
+- `POST /api/data` - Para guardar datos (body: `{ timestamp, data }`)
+- `GET /api/data` - Para cargar datos (retorna: `{ data }`)
+
 ## Notas
 
 - Los datos se almacenan localmente en el navegador (localStorage)
+- Si está configurado, los cambios también se sincronizan con un servidor remoto
 - El panel de administración requiere el atajo de teclado `Ctrl + Alt + A`
 - Todas las preguntas son obligatorias antes de enviar la evaluación
+- Puedes editar los campos de las evaluaciones haciendo clic en ellos (en el panel de administración)
 

@@ -8,6 +8,7 @@ import NavigationButtons from './components/NavigationButtons'
 import AdminPanel from './components/AdminPanel'
 import SuccessMessage from './components/SuccessMessage'
 import { loadData, saveData } from './utils/dataUtils'
+import { saveDataToServer } from './utils/apiService'
 import './App.css'
 
 function App() {
@@ -42,6 +43,10 @@ function App() {
 
   useEffect(() => {
     saveData(data)
+    // También guardar en servidor si está configurado
+    saveDataToServer(data).catch(err => {
+      console.warn('Error al sincronizar con servidor:', err)
+    })
   }, [data])
 
   const validateEmail = (emailValue) => {
@@ -97,7 +102,7 @@ function App() {
 
 
   const handleNext = () => {
-    if (validateCurrentStep()) {    
+    if (validateCurrentStep()) {
       setStep(step + 1)
       setErrors({})
     }
